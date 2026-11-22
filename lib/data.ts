@@ -27,3 +27,13 @@ export async function findMemberByIdentity(regNo: string, phone: string) {
   const member = await db.collection<Member>('members').findOne({ regNo: normalizedRegNo, phone: normalizedPhone });
   return member ? { ...member, _id: member._id?.toString() } : null;
 }
+
+export async function findMemberByLookup(value: string) {
+  const input = value.trim();
+  const normalizedRegNo = input.toUpperCase();
+  const normalizedPhone = normalizeKenyanPhone(input);
+  const db = await getDb();
+  if (!db) return previewMembers.find((m) => m.regNo === normalizedRegNo || m.phone === normalizedPhone) || null;
+  const member = await db.collection<Member>('members').findOne({ $or: [{ regNo: normalizedRegNo }, { phone: normalizedPhone }] });
+  return member ? { ...member, _id: member._id?.toString() } : null;
+}
