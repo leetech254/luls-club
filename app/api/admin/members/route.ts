@@ -33,7 +33,7 @@ export async function POST(req: Request) {
   try {
     const body = await req.json();
     const db = await getDb();
-    if (!db) return NextResponse.json({ error: 'MongoDB is not configured for this deployment.' }, { status: 503 });
+    if (!db) return NextResponse.json({ error: 'The database is not configured for this deployment.' }, { status: 503 });
     if (body.action === 'import-legacy') {
       const legacyMembers = buildLegacyMembers();
       await db.collection('members').createIndex({ regNo: 1 }, { unique: true });
@@ -56,7 +56,7 @@ export async function PATCH(req: Request) {
   try {
     const body = await req.json();
     const db = await getDb();
-    if (!db) return NextResponse.json({ error: 'MongoDB is not configured for this deployment.' }, { status: 503 });
+    if (!db) return NextResponse.json({ error: 'The database is not configured for this deployment.' }, { status: 503 });
     const originalRegNo = String(body.originalRegNo || body.regNo || '').trim().toUpperCase();
     if (!originalRegNo) return NextResponse.json({ error: 'Original registration number is required.' }, { status: 400 });
     if (!body.name && !body.phone) {
