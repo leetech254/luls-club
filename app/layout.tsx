@@ -15,7 +15,7 @@ export const metadata: Metadata = {
   authors: [{ name: 'Laikipia University Linguistics Scholars' }],
   creator: 'Laikipia University Linguistics Scholars',
   alternates: { canonical: '/' },
-  icons: { icon: 'https://files.manuscdn.com/user_upload_by_module/session_file/310519664040303032/bhLRzmHYrBfOMIrG.jpg' },
+  icons: { icon: '/icon.jpg', apple: '/icon.jpg' },
   openGraph: {
     type: 'website',
     url: '/',
