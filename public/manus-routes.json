@@ -1,1 +1,1 @@
-{"routes":[{"path":"/","title":"LULS Scholar Portal"},{"path":"/register","title":"Register as a scholar"},{"path":"/scholars","title":"Scholar directory"},{"path":"/scholars/:slug","title":"Scholar profile"},{"path":"/admin","title":"Admin workspace"}]}
+{"routes":[{"path":"/","title":"LULS Scholar Portal"},{"path":"/register","title":"Register as a scholar"},{"path":"/account","title":"Check your LULS account"},{"path":"/scholars","title":"Scholar directory"},{"path":"/scholars/:slug","title":"Scholar profile"},{"path":"/admin","title":"Admin workspace"}]}

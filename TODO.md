@@ -10,3 +10,5 @@
 - [ ] Admin controls for managing event/research content and selecting which profiles appear publicly.
 - [ ] Secure MongoDB-ready server data layer using protected MONGODB_URI, with validation and error handling.
 - [ ] Responsive, accessible, Vercel-ready production configuration with consistent LULS logo usage.
+- [ ] Registration requires a university registration number such as ED/ART/1158/25, full name, and phone number.
+- [ ] Registered users can search for their account using registration number plus phone number and receive a registration status result.

@@ -17,3 +17,12 @@ export async function listMembers(includePending = false) {
   const query: Partial<Member> = includePending ? {} : { status: 'approved' };
   return (await db.collection<Member>('members').find(query).sort({ createdAt: -1 }).toArray()).map((m) => ({ ...m, _id: m._id?.toString() }));
 }
+
+export async function findMemberByIdentity(regNo: string, phone: string) {
+  const normalizedRegNo = regNo.trim().toUpperCase();
+  const normalizedPhone = phone.replace(/[^\d+]/g, '');
+  const db = await getDb();
+  if (!db) return previewMembers.find((m) => m.regNo === normalizedRegNo && m.phone === normalizedPhone) || null;
+  const member = await db.collection<Member>('members').findOne({ regNo: normalizedRegNo, phone: normalizedPhone });
+  return member ? { ...member, _id: member._id?.toString() } : null;
+}
