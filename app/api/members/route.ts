@@ -11,7 +11,7 @@ export async function GET(req: Request) {
   const lookup = url.searchParams.get('lookup') || '';
   const regNo = url.searchParams.get('regNo') || '';
   const phone = url.searchParams.get('phone') || '';
-  if (!lookup && (!regNo || !phone)) return NextResponse.json({ error: 'Enter a registration number or phone number.' }, { status: 400 });
+  if (!lookup && (!regNo || !phone)) return NextResponse.json({ error: 'Enter a registration number, full name, or phone number.' }, { status: 400 });
   const member = lookup ? await findMemberByLookup(lookup) : await findMemberByIdentity(regNo, phone);
   if (!member) return NextResponse.json({ registered: false, message: 'No matching LULS registration was found.' }, { status: 404 });
   return NextResponse.json({ registered: true, member: { regNo: member.regNo, name: member.name, status: member.status, role: member.role, level: member.level, interests: member.interests, createdAt: member.createdAt, paymentPhone: member.paymentPhone, paymentStatus: member.paymentStatus, paymentAmount: member.paymentAmount, paymentCurrency: member.paymentCurrency, paymentReference: member.paymentReference, paymentRequestId: member.paymentRequestId, paymentReceipt: member.paymentReceipt, paidAt: member.paidAt } });

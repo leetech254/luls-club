@@ -44,9 +44,17 @@ export async function findMemberByLookup(value: string) {
   const input = value.trim();
   const normalizedRegNo = input.toUpperCase();
   const normalizedPhone = normalizeKenyanPhone(input);
+  const escapedName = input.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   const db = await getDb();
-  if (!db) return [...previewMembers, ...buildLegacyMembers()].find((m) => m.regNo === normalizedRegNo || m.phone === normalizedPhone) || null;
+  if (!db) {
+    const members = [...previewMembers, ...buildLegacyMembers()];
+    return members.find((m) => m.regNo === normalizedRegNo || m.phone === normalizedPhone || m.name.toLowerCase() === input.toLowerCase())
+      || members.find((m) => m.name.toLowerCase().includes(input.toLowerCase()))
+      || null;
+  }
   await ensureLegacyMembers(db);
-  const member = await db.collection<Member>('members').findOne({ $or: [{ regNo: normalizedRegNo }, { phone: normalizedPhone }] });
+  const exactName = await db.collection<Member>('members').findOne({ name: { $regex: `^${escapedName}$`, $options: 'i' } });
+  if (exactName) return { ...exactName, _id: exactName._id?.toString() };
+  const member = await db.collection<Member>('members').findOne({ $or: [{ regNo: normalizedRegNo }, { phone: normalizedPhone }, { name: { $regex: escapedName, $options: 'i' } }] });
   return member ? { ...member, _id: member._id?.toString() } : null;
 }
