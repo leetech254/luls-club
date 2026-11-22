@@ -24,3 +24,14 @@ html,body{max-width:100%;overflow-x:hidden}.site-shell{width:100%;overflow:hidde
 .admin-sidebar-closed{width:76px}
 .admin-menu-closed .admin-content{margin-left:76px}
 @media(max-width:900px){.admin-sidebar,.admin-sidebar-closed{display:none}.admin-content,.admin-menu-closed .admin-content{margin-left:0}.admin-workspace{display:block}}
+
+/* Keep the admin drawer on the left at every screen size */
+@media(max-width:900px){
+  .admin-sidebar{display:flex;width:min(280px,88vw);min-height:100vh;top:0;bottom:0;overflow-y:auto}
+  .admin-sidebar-closed{display:flex;width:76px}
+  .admin-content,.admin-menu-closed .admin-content{margin-left:0;padding:88px 16px 46px}
+  .admin-mobile-nav{display:none}
+  .admin-workspace{display:block}
+  .admin-sidebar-heading strong{font-size:22px}
+  .admin-content-head{padding-top:14px}
+}
