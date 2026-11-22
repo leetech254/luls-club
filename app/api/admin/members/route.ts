@@ -59,6 +59,13 @@ export async function PATCH(req: Request) {
     if (!db) return NextResponse.json({ error: 'MongoDB is not configured for this deployment.' }, { status: 503 });
     const originalRegNo = String(body.originalRegNo || body.regNo || '').trim().toUpperCase();
     if (!originalRegNo) return NextResponse.json({ error: 'Original registration number is required.' }, { status: 400 });
+    if (!body.name && !body.phone) {
+      const paymentStatus = String(body.paymentStatus || '') as (typeof paymentStatuses)[number];
+      if (!paymentStatuses.includes(paymentStatus)) return NextResponse.json({ error: 'Choose a valid payment status.' }, { status: 400 });
+      const result = await db.collection('members').updateOne({ regNo: originalRegNo }, { $set: { paymentStatus, status: paymentStatus === 'paid' ? 'approved' : 'pending', ...(paymentStatus === 'paid' ? { paidAt: new Date().toISOString() } : { paidAt: null }) } });
+      if (!result.matchedCount) return NextResponse.json({ error: 'Member not found.' }, { status: 404 });
+      return NextResponse.json({ ok: true, regNo: originalRegNo, paymentStatus });
+    }
     const member = cleanMemberInput(body, { regNo: originalRegNo });
     if (member.regNo !== originalRegNo) {
       const duplicate = await db.collection('members').findOne({ regNo: member.regNo });
