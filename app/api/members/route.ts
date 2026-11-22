@@ -4,7 +4,7 @@ import { startMpesaPrompt, normalizeKenyanPhone } from '@/lib/leetec';
 
 function slugify(value: string) { return value.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, ''); }
 const regNoPattern = /^[A-Z]{2,5}\/[A-Z]{2,8}\/[0-9]{3,8}\/[0-9]{2}$/;
-const kenyanMobilePattern = /^\+254[17][0-9]{8}$/;
+const kenyanMobilePattern = /^\+254(?:1[0-9]|7[0-9])[0-9]{7}$/;
 
 export async function GET(req: Request) {
   const url = new URL(req.url);
@@ -27,8 +27,8 @@ export async function POST(req: Request) {
     const phone = normalizeKenyanPhone(String(body.phone));
     const mpesaPhone = normalizeKenyanPhone(String(body.mpesaPhone));
     if (!regNoPattern.test(regNo)) return NextResponse.json({ error: 'Use a registration number like ED/ART/1158/25.' }, { status: 400 });
-    if (!kenyanMobilePattern.test(phone)) return NextResponse.json({ error: 'Enter a valid Kenyan contact number, for example 0712 345 678.' }, { status: 400 });
-    if (!kenyanMobilePattern.test(mpesaPhone)) return NextResponse.json({ error: 'Enter a valid Kenyan M-Pesa number, for example 0712 345 678.' }, { status: 400 });
+    if (!kenyanMobilePattern.test(phone)) return NextResponse.json({ error: 'Enter a valid Kenyan contact number, for example 0116 123 456, 0723 456 789, or 254723456789.' }, { status: 400 });
+    if (!kenyanMobilePattern.test(mpesaPhone)) return NextResponse.json({ error: 'Enter a valid Kenyan M-Pesa number, for example 0116 123 456, 0723 456 789, or 254723456789.' }, { status: 400 });
 
     const db = await getDb();
     if (db) {
