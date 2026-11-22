@@ -13,7 +13,7 @@ export async function GET(req: Request) {
     if (!member) return NextResponse.json({ error: 'Member account not found.' }, { status: 404 });
     if (!member.paymentRequestId) return NextResponse.json({ paymentStatus: member.paymentStatus, paymentMessage: 'No active M-Pesa payment prompt was found.' });
     const result = await getMpesaStatus(member.paymentRequestId);
-    const normalized = result.status === 'SUCCESS' ? 'paid' : (['FAILED', 'CANCELLED', 'REJECTED'].includes(result.status) ? 'rejected' : 'pending');
+    const normalized = ['SUCCESS', 'SUCCESSFUL', 'COMPLETED', 'PAID', 'CONFIRMED'].includes(result.status) ? 'paid' : (['FAILED', 'CANCELLED', 'REJECTED', 'FAILED_PAYMENT'].includes(result.status) ? 'rejected' : 'pending');
     const db = await getDb();
     let emailStatus: 'sent' | 'already_sent' | 'failed' | 'not_configured' | 'not_persisted' = 'not_persisted';
     const paidAt = normalized === 'paid' ? (member.paidAt || new Date().toISOString()) : member.paidAt;
@@ -32,6 +32,6 @@ export async function GET(req: Request) {
         }
       }
     }
-    return NextResponse.json({ paymentStatus: normalized, providerStatus: result.status, providerConfigured: result.configured, receipt: paymentReceipt || null, emailStatus });
+    return NextResponse.json({ paymentStatus: normalized, membershipStatus: normalized === 'paid' ? 'approved' : member.status, providerStatus: result.status, providerConfigured: result.configured, receipt: paymentReceipt || null, emailStatus });
   } catch { return NextResponse.json({ error: 'Unable to check M-Pesa payment status.' }, { status: 500 }); }
 }
