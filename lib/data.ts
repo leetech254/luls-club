@@ -1,5 +1,5 @@
 import { MongoClient } from 'mongodb';
-import { Member, previewMembers } from '@/lib/preview';
+import { Member } from '@/lib/preview';
 import { normalizeKenyanPhone } from '@/lib/leetec';
 import { buildLegacyMembers } from '@/lib/legacy-members';
 export type { Member } from '@/lib/preview';
@@ -24,7 +24,7 @@ async function ensureLegacyMembers(db: Awaited<ReturnType<typeof getDb>>) {
 
 export async function listMembers(includePending = false) {
   const db = await getDb();
-  if (!db) { const members = [...previewMembers, ...buildLegacyMembers()]; return includePending ? members : members.filter((m) => m.status === 'approved'); }
+  if (!db) return [];
   await ensureLegacyMembers(db);
   const query: Partial<Member> = includePending ? {} : { status: 'approved' };
   return (await db.collection<Member>('members').find(query).sort({ createdAt: -1 }).toArray()).map((m) => ({ ...m, _id: m._id?.toString() }));
@@ -34,7 +34,7 @@ export async function findMemberByIdentity(regNo: string, phone: string) {
   const normalizedRegNo = regNo.trim().toUpperCase();
   const normalizedPhone = normalizeKenyanPhone(phone);
   const db = await getDb();
-  if (!db) return [...previewMembers, ...buildLegacyMembers()].find((m) => m.regNo === normalizedRegNo && m.phone === normalizedPhone) || null;
+  if (!db) return null;
   await ensureLegacyMembers(db);
   const member = await db.collection<Member>('members').findOne({ regNo: normalizedRegNo, phone: normalizedPhone });
   return member ? { ...member, _id: member._id?.toString() } : null;
@@ -46,12 +46,7 @@ export async function findMemberByLookup(value: string) {
   const normalizedPhone = normalizeKenyanPhone(input);
   const escapedName = input.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   const db = await getDb();
-  if (!db) {
-    const members = [...previewMembers, ...buildLegacyMembers()];
-    return members.find((m) => m.regNo === normalizedRegNo || m.phone === normalizedPhone || m.name.toLowerCase() === input.toLowerCase())
-      || members.find((m) => m.name.toLowerCase().includes(input.toLowerCase()))
-      || null;
-  }
+  if (!db) return null;
   await ensureLegacyMembers(db);
   const exactName = await db.collection<Member>('members').findOne({ name: { $regex: `^${escapedName}$`, $options: 'i' } });
   if (exactName) return { ...exactName, _id: exactName._id?.toString() };
