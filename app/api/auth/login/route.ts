@@ -1,2 +1,25 @@
 import { NextResponse } from 'next/server';
-export async function GET(req:Request){const portal=process.env.MANUS_OAUTH_PORTAL_URL;if(!portal)return NextResponse.json({error:'Manus OAuth is not configured in this deployment.'},{status:503});const url=new URL(req.url);const redirectUri=`${url.origin}/api/auth/callback`;const nonce=crypto.randomUUID();const state=Buffer.from(JSON.stringify({redirectUri,nonce})).toString('base64url');const response=NextResponse.redirect(`${portal}/app-auth?appId=${encodeURIComponent(process.env.MANUS_PROJECT_ID||'')}&redirectUri=${encodeURIComponent(redirectUri)}&state=${encodeURIComponent(state)}&responseType=code`);response.cookies.set('luls_oauth_nonce',nonce,{httpOnly:true,sameSite:'lax',secure:true,maxAge:600,path:'/'});return response;}
+import { createAdminSession, verifyAdminCredentials } from '@/lib/auth';
+
+export async function POST(request: Request) {
+  const form = await request.formData();
+  const email = String(form.get('email') || '').trim().toLowerCase();
+  const password = String(form.get('password') || '');
+  const response = NextResponse.redirect(new URL('/admin?error=invalid', request.url));
+
+  if (!email || !password || !verifyAdminCredentials(email, password)) return response;
+
+  const loggedIn = NextResponse.redirect(new URL('/admin', request.url));
+  loggedIn.cookies.set('luls_admin_session', await createAdminSession({ email }), {
+    httpOnly: true,
+    sameSite: 'none',
+    secure: true,
+    maxAge: 604800,
+    path: '/',
+  });
+  return loggedIn;
+}
+
+export async function GET(request: Request) {
+  return NextResponse.redirect(new URL('/admin', request.url));
+}
