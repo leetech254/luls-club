@@ -12,3 +12,5 @@
 - [ ] Responsive, accessible, Vercel-ready production configuration with consistent LULS logo usage.
 - [ ] Registration requires a university registration number such as ED/ART/1158/25, full name, and phone number.
 - [ ] Registered users can search for their account using registration number plus phone number and receive a registration status result.
+- [ ] Registration starts a KES 100 Lee Tec M-Pesa STK Push using server-only LEETEC_API_KEY and LEETEC_BASE_URL values.
+- [ ] Payment status is tracked per registration, with Lee Tec status polling and admin verification controls.

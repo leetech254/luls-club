@@ -1,5 +1,6 @@
 import { MongoClient } from 'mongodb';
 import { Member, previewMembers } from '@/lib/preview';
+import { normalizeKenyanPhone } from '@/lib/leetec';
 export type { Member } from '@/lib/preview';
 
 let clientPromise: Promise<MongoClient> | null = null;
@@ -20,7 +21,7 @@ export async function listMembers(includePending = false) {
 
 export async function findMemberByIdentity(regNo: string, phone: string) {
   const normalizedRegNo = regNo.trim().toUpperCase();
-  const normalizedPhone = phone.replace(/[^\d+]/g, '');
+  const normalizedPhone = normalizeKenyanPhone(phone);
   const db = await getDb();
   if (!db) return previewMembers.find((m) => m.regNo === normalizedRegNo && m.phone === normalizedPhone) || null;
   const member = await db.collection<Member>('members').findOne({ regNo: normalizedRegNo, phone: normalizedPhone });
