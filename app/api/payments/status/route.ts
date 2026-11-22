@@ -14,7 +14,7 @@ export async function GET(req: Request) {
     const result = await getMpesaStatus(member.paymentRequestId);
     const normalized = result.status === 'SUCCESS' ? 'paid' : (['FAILED', 'CANCELLED', 'REJECTED'].includes(result.status) ? 'rejected' : 'pending');
     const db = await getDb();
-    if (db && result.configured && result.status !== 'ERROR') await db.collection('members').updateOne({ regNo: member.regNo }, { $set: { paymentStatus: normalized, paymentReceipt: result.receipt || member.paymentReceipt, paidAt: normalized === 'paid' ? (member.paidAt || new Date().toISOString()) : member.paidAt } });
+    if (db && result.configured && result.status !== 'ERROR') await db.collection('members').updateOne({ regNo: member.regNo }, { $set: { paymentStatus: normalized, paymentReceipt: result.receipt || member.paymentReceipt, paidAt: normalized === 'paid' ? (member.paidAt || new Date().toISOString()) : member.paidAt, ...(normalized === 'paid' ? { status: 'approved' } : {}) } });
     return NextResponse.json({ paymentStatus: normalized, providerStatus: result.status, providerConfigured: result.configured, receipt: result.receipt || null });
   } catch { return NextResponse.json({ error: 'Unable to check M-Pesa payment status.' }, { status: 500 }); }
 }
