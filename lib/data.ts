@@ -10,7 +10,22 @@ export async function getDb() {
   if (!uri) return null;
   if (!clientPromise) clientPromise = new MongoClient(uri).connect();
   const client = await clientPromise;
-  return client.db(process.env.MONGODB_DB || 'luls_portal');
+  const db = client.db(process.env.MONGODB_DB || 'luls_portal');
+  await purgeUnpaidRegistrationRecords(db);
+  return db;
+}
+
+async function purgeUnpaidRegistrationRecords(db: Awaited<ReturnType<MongoClient['db']>>) {
+  await db.collection('members').deleteMany({
+    $or: [
+      { paymentStatus: { $in: ['rejected', 'cancelled', 'canceled', 'failed', 'declined'] } },
+      { status: { $in: ['rejected', 'cancelled', 'canceled', 'failed', 'declined'] } },
+      { paymentStatus: 'pending', paymentRequestId: { $exists: true } },
+    ],
+  });
+  await db.collection('registrationPayments').deleteMany({
+    status: { $in: ['rejected', 'cancelled', 'canceled', 'failed', 'declined'] },
+  });
 }
 
 async function ensureLegacyMembers(db: Awaited<ReturnType<typeof getDb>>) {
