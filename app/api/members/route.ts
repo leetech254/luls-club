@@ -44,7 +44,7 @@ export async function POST(req: Request) {
     const existing = await db.collection('members').findOne({ regNo });
     if (existing) return NextResponse.json({ error: 'That registration number is already registered.' }, { status: 409 });
     const activePayment = await db.collection('registrationPayments').findOne({ regNo, status: 'pending' });
-    if (activePayment) return NextResponse.json({ error: 'A registration payment is already in progress for that registration number. Complete it on the selected M-Pesa phone, then refresh the status.' }, { status: 409 });
+    if (activePayment) return NextResponse.json({ error: 'A registration payment is already in progress for that registration number. Complete it on the selected M-Pesa phone, then refresh the status.', requestId: activePayment.paymentRequestId, paymentStatus: 'pending', paymentMessage: 'An active payment was found. We will continue checking it automatically.' }, { status: 409 });
 
     const name = String(body.name).trim();
     const prompt = await startMpesaPrompt({ phone: mpesaPhone, regNo, name });

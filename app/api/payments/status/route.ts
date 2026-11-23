@@ -81,7 +81,7 @@ export async function GET(req: Request) {
       if (!result.configured) return NextResponse.json({ paymentStatus: 'pending', providerConfigured: false, providerStatus: result.status, emailStatus: 'not_applicable' });
       if (result.status === 'ERROR') return NextResponse.json({ paymentStatus: 'pending', providerConfigured: true, providerStatus: result.status, emailStatus: 'not_applicable' });
       const paymentReceipt = result.receipt || payment.paymentReceipt;
-      if (normalized === 'pending') return NextResponse.json({ paymentStatus: 'pending', providerConfigured: true, providerStatus: result.status, receipt: paymentReceipt || null, emailStatus: 'not_applicable' });
+      if (normalized === 'pending') return NextResponse.json({ paymentStatus: 'pending', requestId: payment.paymentRequestId, providerConfigured: true, providerStatus: result.status, receipt: paymentReceipt || null, emailStatus: 'not_applicable' });
       if (normalized === 'rejected') {
         await db!.collection('registrationPayments').deleteOne({ regNo: payment.regNo });
         return NextResponse.json({ paymentStatus: 'rejected', membershipStatus: 'pending', providerConfigured: true, providerStatus: result.status, receipt: paymentReceipt || null, emailStatus: 'not_applicable' });
