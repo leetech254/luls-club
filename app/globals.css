@@ -74,3 +74,5 @@ html,body{max-width:100%;overflow-x:hidden}.site-shell{width:100%;overflow:hidde
 .retreat-success{background:#dcebdc;color:#235b32;margin:0}
 .event.primary{cursor:pointer}
 @media(max-width:800px){.retreat-hero,.retreat-grid{grid-template-columns:1fr}.retreat-hero img{min-height:240px;max-height:300px}.retreat-hero-copy{padding:30px 22px}.retreat-hero-copy h1{font-size:50px}.retreat-info{padding:22px}.retreat-detail-list{grid-template-columns:1fr}.retreat-detail-list strong{padding-top:0}}
+
+.admin-login-nav{display:flex;align-items:center;justify-content:space-between;gap:18px;margin-bottom:52px}.admin-login-nav .brand{flex-shrink:0}.admin-login-card{max-width:680px}.admin-login-card .actions{flex-wrap:wrap}.admin-login-card .button{justify-content:center;text-align:center}@media(max-width:600px){.admin-login-nav{align-items:flex-start;flex-direction:column;margin-bottom:36px}.admin-login-nav .button{width:100%;justify-content:center}.admin-login-card .actions{display:grid;grid-template-columns:1fr}.admin-login-card .actions .button{width:100%}}
