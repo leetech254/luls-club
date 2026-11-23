@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { findMemberByIdentity, findMemberByLookup, getDb } from '@/lib/data';
 import { startMpesaPrompt, normalizeKenyanPhone } from '@/lib/leetec';
+import { maskPhone } from '@/lib/privacy';
 
 function slugify(value: string) { return value.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, ''); }
 const regNoPattern = /^[A-Z]{2,5}\/[A-Z]{2,8}\/[0-9]{3,8}\/[0-9]{2}$/;
@@ -14,7 +15,7 @@ export async function GET(req: Request) {
   if (!lookup && (!regNo || !phone)) return NextResponse.json({ error: 'Enter a registration number, full name, or phone number.' }, { status: 400 });
   const member = lookup ? await findMemberByLookup(lookup) : await findMemberByIdentity(regNo, phone);
   if (!member) return NextResponse.json({ registered: false, message: 'No matching LULS registration was found.' }, { status: 404 });
-  return NextResponse.json({ registered: true, member: { regNo: member.regNo, name: member.name, status: member.status, role: member.role, level: member.level, interests: member.interests, createdAt: member.createdAt, paymentPhone: member.paymentPhone, paymentStatus: member.paymentStatus, paymentAmount: member.paymentAmount, paymentCurrency: member.paymentCurrency, paymentReference: member.paymentReference, paymentRequestId: member.paymentRequestId, paymentReceipt: member.paymentReceipt, paidAt: member.paidAt } });
+  return NextResponse.json({ registered: true, member: { regNo: member.regNo, status: member.status, createdAt: member.createdAt, paymentPhone: maskPhone(member.paymentPhone), paymentStatus: member.paymentStatus, paymentAmount: member.paymentAmount, paymentCurrency: member.paymentCurrency, paymentReceipt: member.paymentReceipt, paidAt: member.paidAt } });
 }
 
 export async function POST(req: Request) {

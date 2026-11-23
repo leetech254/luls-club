@@ -1,12 +1,29 @@
 import { NextResponse } from 'next/server';
 import { findMemberByLookup, getDb } from '@/lib/data';
 import { getMpesaStatus, normalizeKenyanPhone, startMpesaPrompt } from '@/lib/leetec';
+import { sendRetreatPaymentConfirmationEmail } from '@/lib/email';
 
 const phonePattern = /^\+254(?:1[0-9]|7[0-9])[0-9]{7}$/;
 const paidStatuses = ['SUCCESS', 'SUCCESSFUL', 'COMPLETED', 'PAID', 'CONFIRMED'];
 const rejectedStatuses = ['FAILED', 'FAILED_PAYMENT', 'CANCELLED', 'REJECTED'];
 
 function paymentState(status: string) { return paidStatuses.includes(status) ? 'paid' : rejectedStatuses.includes(status) ? 'rejected' : 'pending'; }
+
+async function sendRetreatEmailIfNeeded(db: NonNullable<Awaited<ReturnType<typeof getDb>>>, member: any, receipt: string | undefined, paidAt: string) {
+  if (member.retreatEmailSentAt) return 'already_sent';
+  const claim = await db.collection('members').updateOne(
+    { regNo: member.regNo, retreatPaymentStatus: 'paid', retreatEmailSentAt: { $exists: false }, retreatEmailSendingAt: { $exists: false } },
+    { $set: { retreatEmailSendingAt: new Date().toISOString() } },
+  );
+  if (claim.matchedCount !== 1) return 'already_sent';
+  const email = await sendRetreatPaymentConfirmationEmail({ ...member, retreatPaymentStatus: 'paid', retreatPaymentReceipt: receipt, retreatPaidAt: paidAt }, receipt);
+  if (email.sent) {
+    await db.collection('members').updateOne({ regNo: member.regNo }, { $set: { retreatEmailSentAt: new Date().toISOString(), retreatEmailId: email.id, retreatEmailStatus: 'sent' }, $unset: { retreatEmailSendingAt: '' } });
+    return 'sent';
+  }
+  await db.collection('members').updateOne({ regNo: member.regNo }, { $set: { retreatEmailStatus: 'failed' }, $unset: { retreatEmailSendingAt: '' } });
+  return email.configured ? 'failed' : 'not_configured';
+}
 
 async function findRetreatMember(lookup: string) {
   const member = await findMemberByLookup(lookup);
@@ -23,16 +40,23 @@ export async function GET(req: Request) {
     if (error || !member) return error;
     let status = member.retreatPaymentStatus || 'unpaid';
     let receipt = member.retreatPaymentReceipt;
+    let emailStatus = 'not_applicable';
     if (member.retreatPaymentRequestId && status === 'pending') {
       const result = await getMpesaStatus(member.retreatPaymentRequestId);
       status = paymentState(result.status);
       receipt = result.receipt || receipt;
       const db = await getDb();
       if (db && result.configured && result.status !== 'ERROR') {
-        await db.collection('members').updateOne({ regNo: member.regNo }, { $set: { retreatPaymentStatus: status, retreatPaymentReceipt: receipt, ...(status === 'paid' ? { retreatPaidAt: member.retreatPaidAt || new Date().toISOString() } : {}) } });
+        const paidAt = status === 'paid' ? (member.retreatPaidAt || new Date().toISOString()) : member.retreatPaidAt;
+        await db.collection('members').updateOne({ regNo: member.regNo }, { $set: { retreatPaymentStatus: status, retreatPaymentReceipt: receipt, ...(status === 'paid' ? { retreatPaidAt: paidAt } : {}) } });
+        if (status === 'paid' && paidAt) emailStatus = await sendRetreatEmailIfNeeded(db, member, receipt, paidAt);
       }
+    } else if (status === 'paid') {
+      const db = await getDb();
+      const paidAt = member.retreatPaidAt || new Date().toISOString();
+      if (db) emailStatus = await sendRetreatEmailIfNeeded(db, member, receipt, paidAt);
     }
-    return NextResponse.json({ eligible: true, member: { regNo: member.regNo, name: member.name, retreatPaymentStatus: status, retreatPaymentRequestId: member.retreatPaymentRequestId, retreatPaymentReceipt: receipt || null } });
+    return NextResponse.json({ eligible: true, emailStatus, member: { regNo: member.regNo, name: member.name, retreatPaymentStatus: status, retreatPaymentRequestId: member.retreatPaymentRequestId, retreatPaymentReceipt: receipt || null } });
   } catch { return NextResponse.json({ error: 'Unable to check retreat payment status.' }, { status: 500 }); }
 }
 
