@@ -37,18 +37,39 @@ export async function POST(req: Request) {
     if (!kenyanMobilePattern.test(mpesaPhone)) return NextResponse.json({ error: 'Enter a valid Kenyan M-Pesa number, for example 0116 123 456, 0723 456 789, or 254723456789.' }, { status: 400 });
 
     const db = await getDb();
-    if (db) {
-      const existing = await db.collection('members').findOne({ regNo });
-      if (existing) return NextResponse.json({ error: 'That registration number is already registered.' }, { status: 409 });
-    }
+    if (!db) return NextResponse.json({ error: 'The registration database is not configured yet.' }, { status: 503 });
+    const existing = await db.collection('members').findOne({ regNo });
+    if (existing) return NextResponse.json({ error: 'That registration number is already registered.' }, { status: 409 });
+    const activePayment = await db.collection('registrationPayments').findOne({ regNo, status: 'pending' });
+    if (activePayment) return NextResponse.json({ error: 'A registration payment is already in progress for that registration number. Complete it on the selected M-Pesa phone, then refresh the status.' }, { status: 409 });
 
     const name = String(body.name).trim();
     const prompt = await startMpesaPrompt({ phone: mpesaPhone, regNo, name });
     if (!prompt.accepted) return NextResponse.json({ error: prompt.error || 'Unable to start the M-Pesa prompt.' }, { status: 503 });
 
-    const member = { slug: `${slugify(name)}-${Date.now().toString().slice(-5)}`, regNo, name, email: String(body.email).trim().toLowerCase(), phone, paymentPhone: mpesaPhone, level: String(body.level).trim(), role: String(body.role).trim(), interests: String(body.interests).split(',').map((x: string) => x.trim()).filter(Boolean), bio: String(body.bio).trim(), status: 'pending' as const, paymentStatus: 'pending' as const, paymentAmount: 100, paymentCurrency: 'KES' as const, paymentReference: prompt.requestId, paymentRequestId: prompt.requestId, paymentMethod: 'M-Pesa STK Push', createdAt: new Date().toISOString() };
-    if (db) { await db.collection('members').createIndex({ regNo: 1 }, { unique: true }); await db.collection('members').insertOne(member); }
-    return NextResponse.json({ ok: true, paymentStarted: true, message: `M-Pesa prompt sent to ${mpesaPhone}. Complete the KES 100 payment on that phone, then check your account status.`, requestId: prompt.requestId, member: { ...member, _id: undefined } }, { status: 201 });
+    const payment = {
+      type: 'registration',
+      regNo,
+      name,
+      email: String(body.email).trim().toLowerCase(),
+      phone,
+      paymentPhone: mpesaPhone,
+      level: String(body.level).trim(),
+      role: 'LULS member',
+      interests: String(body.interests).split(',').map((x: string) => x.trim()).filter(Boolean),
+      bio: String(body.bio).trim(),
+      status: 'pending' as const,
+      paymentStatus: 'pending' as const,
+      paymentAmount: 100,
+      paymentCurrency: 'KES' as const,
+      paymentReference: prompt.requestId,
+      paymentRequestId: prompt.requestId,
+      paymentMethod: 'M-Pesa STK Push',
+      createdAt: new Date().toISOString(),
+    };
+    await db.collection('registrationPayments').createIndex({ regNo: 1 }, { unique: true });
+    await db.collection('registrationPayments').replaceOne({ regNo }, payment, { upsert: true });
+    return NextResponse.json({ ok: true, paymentStarted: true, message: `M-Pesa prompt sent to ${mpesaPhone}. The member account will be created only after the KES 100 payment succeeds.`, requestId: prompt.requestId }, { status: 201 });
   } catch (error) {
     console.error(error);
     return NextResponse.json({ error: 'Unable to start registration payment right now.' }, { status: 500 });
