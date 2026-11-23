@@ -38,6 +38,9 @@ export async function POST(req: Request) {
 
     const db = await getDb();
     if (!db) return NextResponse.json({ error: 'The registration database is not configured yet.' }, { status: 503 });
+    await db.collection('registrationPayments').createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 });
+    const expiryCutoff = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    await db.collection('registrationPayments').deleteMany({ status: 'pending', $or: [{ expiresAt: { $lte: new Date() } }, { expiresAt: { $exists: false }, createdAt: { $lte: expiryCutoff.toISOString() } }] });
     const existing = await db.collection('members').findOne({ regNo });
     if (existing) return NextResponse.json({ error: 'That registration number is already registered.' }, { status: 409 });
     const activePayment = await db.collection('registrationPayments').findOne({ regNo, status: 'pending' });
@@ -66,6 +69,7 @@ export async function POST(req: Request) {
       paymentRequestId: prompt.requestId,
       paymentMethod: 'M-Pesa STK Push',
       createdAt: new Date().toISOString(),
+      expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
     };
     await db.collection('registrationPayments').createIndex({ regNo: 1 }, { unique: true });
     await db.collection('registrationPayments').replaceOne({ regNo }, payment, { upsert: true });

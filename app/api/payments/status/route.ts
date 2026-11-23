@@ -100,6 +100,10 @@ export async function GET(req: Request) {
     const paidAt = normalized === 'paid' ? (member.paidAt || new Date().toISOString()) : member.paidAt;
     const paymentReceipt = result.receipt || member.paymentReceipt;
     if (db && result.configured && result.status !== 'ERROR') {
+      if (normalized === 'rejected' && member.paymentStatus !== 'paid') {
+        await db.collection('members').deleteOne({ regNo: member.regNo, paymentStatus: { $ne: 'paid' } });
+        return NextResponse.json({ paymentStatus: 'rejected', membershipStatus: 'pending', providerStatus: result.status, providerConfigured: result.configured, receipt: paymentReceipt || null, emailStatus: 'not_applicable' });
+      }
       await db.collection('members').updateOne({ regNo: member.regNo }, { $set: { paymentStatus: normalized, paymentReceipt, ...(paidAt ? { paidAt } : {}), ...(normalized === 'paid' ? { status: 'approved' } : {}) } });
       if (normalized === 'paid') emailStatus = await sendWelcomeEmail(db, { ...member, paymentStatus: 'paid', status: 'approved', paymentReceipt, paidAt }, paymentReceipt, paidAt || new Date().toISOString());
     }
