@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import './globals.css';
 import { Shell } from '@/components/Shell';
 
-const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000');
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'https://luls-club.leetec.online');
 const title = 'Laikipia University Linguistics Scholars Club | LULS';
 const description = 'Laikipia University Linguistics Scholars Club connects students and researchers exploring language, culture, identity, and community across Kenya.';
 
