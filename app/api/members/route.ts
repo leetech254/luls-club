@@ -15,7 +15,12 @@ export async function GET(req: Request) {
   if (!lookup && (!regNo || !phone)) return NextResponse.json({ error: 'Enter a registration number, full name, or phone number.' }, { status: 400 });
   const member = lookup ? await findMemberByLookup(lookup) : await findMemberByIdentity(regNo, phone);
   if (!member) return NextResponse.json({ registered: false, message: 'No matching LULS registration was found.' }, { status: 404 });
-  return NextResponse.json({ registered: true, member: { regNo: member.regNo, status: member.status, createdAt: member.createdAt, paymentPhone: maskPhone(member.paymentPhone), paymentStatus: member.paymentStatus, paymentAmount: member.paymentAmount, paymentCurrency: member.paymentCurrency, paymentReceipt: member.paymentReceipt, paidAt: member.paidAt } });
+  const membershipStatus = member.paymentStatus === 'paid' ? 'approved' : member.status;
+  if (membershipStatus !== member.status) {
+    const db = await getDb();
+    if (db) await db.collection('members').updateOne({ regNo: member.regNo }, { $set: { status: membershipStatus } });
+  }
+  return NextResponse.json({ registered: true, member: { regNo: member.regNo, status: membershipStatus, createdAt: member.createdAt, paymentPhone: maskPhone(member.paymentPhone), paymentStatus: member.paymentStatus, paymentAmount: member.paymentAmount, paymentCurrency: member.paymentCurrency, paymentReceipt: member.paymentReceipt, paidAt: member.paidAt } });
 }
 
 export async function POST(req: Request) {
