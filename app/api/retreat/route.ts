@@ -9,6 +9,16 @@ const rejectedStatuses = ['FAILED', 'FAILED_PAYMENT', 'CANCELLED', 'REJECTED'];
 
 function paymentState(status: string) { return paidStatuses.includes(status) ? 'paid' : rejectedStatuses.includes(status) ? 'rejected' : 'pending'; }
 
+async function upsertRetreatRecord(db: NonNullable<Awaited<ReturnType<typeof getDb>>>, member: any, status: string, receipt?: string | null, paidAt?: string) {
+  const requestId = member.retreatPaymentRequestId || member.retreatPaymentReference;
+  if (!requestId) return;
+  await db.collection('retreatPayments').updateOne(
+    { requestId },
+    { $set: { memberRegNo: member.regNo, memberName: member.name, email: member.email || '', contactPhone: member.phone, mpesaPhone: member.retreatPaymentPhone || member.paymentPhone || '', amount: 200, currency: 'KES', status, requestId, reference: member.retreatPaymentReference || requestId, receipt: receipt || null, paidAt: paidAt || null, event: 'Thomson Falls member retreat', retreatDate: '2026-11-29', destination: 'Thomson Falls, Nyahururu', updatedAt: new Date().toISOString() }, $setOnInsert: { createdAt: new Date().toISOString() } },
+    { upsert: true },
+  );
+}
+
 async function sendRetreatEmailIfNeeded(db: NonNullable<Awaited<ReturnType<typeof getDb>>>, member: any, receipt: string | undefined, paidAt: string) {
   if (member.retreatEmailSentAt) return 'already_sent';
   const claim = await db.collection('members').updateOne(
@@ -19,9 +29,13 @@ async function sendRetreatEmailIfNeeded(db: NonNullable<Awaited<ReturnType<typeo
   const email = await sendRetreatPaymentConfirmationEmail({ ...member, retreatPaymentStatus: 'paid', retreatPaymentReceipt: receipt, retreatPaidAt: paidAt }, receipt);
   if (email.sent) {
     await db.collection('members').updateOne({ regNo: member.regNo }, { $set: { retreatEmailSentAt: new Date().toISOString(), retreatEmailId: email.id, retreatEmailStatus: 'sent' }, $unset: { retreatEmailSendingAt: '' } });
+    await upsertRetreatRecord(db, member, 'paid', receipt, paidAt);
+    await db.collection('retreatPayments').updateOne({ requestId: member.retreatPaymentRequestId || member.retreatPaymentReference }, { $set: { emailStatus: 'sent', emailSentAt: new Date().toISOString(), emailId: email.id || null } });
     return 'sent';
   }
   await db.collection('members').updateOne({ regNo: member.regNo }, { $set: { retreatEmailStatus: 'failed' }, $unset: { retreatEmailSendingAt: '' } });
+  await upsertRetreatRecord(db, member, 'paid', receipt, paidAt);
+  await db.collection('retreatPayments').updateOne({ requestId: member.retreatPaymentRequestId || member.retreatPaymentReference }, { $set: { emailStatus: email.configured ? 'failed' : 'not_configured' } });
   return email.configured ? 'failed' : 'not_configured';
 }
 
@@ -49,12 +63,13 @@ export async function GET(req: Request) {
       if (db && result.configured && result.status !== 'ERROR') {
         const paidAt = status === 'paid' ? (member.retreatPaidAt || new Date().toISOString()) : member.retreatPaidAt;
         await db.collection('members').updateOne({ regNo: member.regNo }, { $set: { retreatPaymentStatus: status, retreatPaymentReceipt: receipt, ...(status === 'paid' ? { retreatPaidAt: paidAt } : {}) } });
+        await upsertRetreatRecord(db, member, status, receipt, paidAt);
         if (status === 'paid' && paidAt) emailStatus = await sendRetreatEmailIfNeeded(db, member, receipt, paidAt);
       }
     } else if (status === 'paid') {
       const db = await getDb();
       const paidAt = member.retreatPaidAt || new Date().toISOString();
-      if (db) emailStatus = await sendRetreatEmailIfNeeded(db, member, receipt, paidAt);
+      if (db) { await upsertRetreatRecord(db, member, 'paid', receipt, paidAt); emailStatus = await sendRetreatEmailIfNeeded(db, member, receipt, paidAt); }
     }
     return NextResponse.json({ eligible: true, emailStatus, member: { regNo: member.regNo, name: member.name, retreatPaymentStatus: status, retreatPaymentRequestId: member.retreatPaymentRequestId, retreatPaymentReceipt: receipt || null } });
   } catch { return NextResponse.json({ error: 'Unable to check retreat payment status.' }, { status: 500 }); }
@@ -74,7 +89,8 @@ export async function POST(req: Request) {
     if (!prompt.accepted) return NextResponse.json({ error: prompt.error || 'Unable to start the KES 200 retreat payment.' }, { status: 503 });
     const db = await getDb();
     if (!db) return NextResponse.json({ error: 'The database is not configured for this retreat payment.' }, { status: 503 });
-    await db.collection('members').updateOne({ regNo: member.regNo }, { $set: { retreatPaymentStatus: 'pending', retreatPaymentRequestId: prompt.requestId, retreatPaymentReference: prompt.requestId, retreatPaymentReceipt: null } });
+    await db.collection('members').updateOne({ regNo: member.regNo }, { $set: { retreatPaymentStatus: 'pending', retreatPaymentPhone: phone, retreatPaymentRequestId: prompt.requestId, retreatPaymentReference: prompt.requestId, retreatPaymentReceipt: null } });
+    await upsertRetreatRecord(db, { ...member, retreatPaymentPhone: phone, retreatPaymentRequestId: prompt.requestId, retreatPaymentReference: prompt.requestId, retreatPaymentStatus: 'pending' }, 'pending', null);
     return NextResponse.json({ eligible: true, paymentStatus: 'pending', requestId: prompt.requestId, message: `KES 200 retreat payment prompt sent to ${phone}. Complete it on that phone, then refresh this page.` }, { status: 201 });
   } catch { return NextResponse.json({ error: 'Unable to start the retreat payment right now.' }, { status: 500 }); }
 }
