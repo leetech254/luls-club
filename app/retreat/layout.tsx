@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
   title: 'Thomson Falls Member Retreat',
-  description: 'Join the Laikipia University Linguistics Scholars Club member retreat at Thomson Falls, Nyahururu on Sunday, 29 November 2026.',
+  description: 'Join the Laikipia University Language Scholars Community member retreat at Thomson Falls, Nyahururu on Sunday, 29 November 2026.',
   alternates: { canonical: '/retreat' },
   openGraph: {
     type: 'website',
