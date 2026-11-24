@@ -1,0 +1,14 @@
+import Link from 'next/link';
+import { listPosts } from '@/lib/content';
+import { ShareButton } from '@/components/ShareButton';
+
+export const metadata = { title: 'Research and updates', description: 'Public LULS research notes, language projects, announcements, and community updates.' };
+
+export default async function ResearchHub() {
+  const [research, updates] = await Promise.all([listPosts({ type: 'research', publishedOnly: true }), listPosts({ type: 'update', publishedOnly: true })]);
+  return <div className="section content-hub"><div className="actions" style={{ marginBottom: 28 }}><Link className="button alt" href="/">← Back to homepage</Link><ShareButton title="LULS research and updates" text="Explore LULS research, language projects, and community updates." /></div><div className="directory-head"><div><div className="eyebrow">Public knowledge desk</div><h1 style={{ font: '600 58px/.98 Fraunces,serif', letterSpacing: '-.05em', margin: '0 0 14px' }}>Research and updates.</h1><p style={{ color: 'var(--muted)', maxWidth: 600, lineHeight: 1.7 }}>Discover language research, student projects, event notices, and community news published by the LULS team.</p></div><Link className="button gold" href="/register">Join the research circle ↗</Link></div><ContentSection title="Research notes" eyebrow="Explore questions" posts={research} empty="Research posts will appear here as the LULS research desk publishes them." type="research" /><ContentSection title="Community updates" eyebrow="Stay connected" posts={updates} empty="Community announcements and updates will appear here." type="update" /></div>;
+}
+
+function ContentSection({ title, eyebrow, posts, empty, type }: { title: string; eyebrow: string; posts: Awaited<ReturnType<typeof listPosts>>; empty: string; type: 'research' | 'update' }) {
+  return <section className="content-section"><div className="section-head"><div><div className="eyebrow">{eyebrow}</div><h2>{title}</h2></div><span className="tag">{posts.length} published</span></div>{posts.length ? <div className="content-cards">{posts.map((post) => <article className={post.featured ? 'content-card featured' : 'content-card'} key={post._id || post.slug}><div className="tag">{type === 'research' ? 'Research note' : 'Community update'} · {post.tags.slice(0, 2).join(' · ') || 'LULS'}</div><h3><Link href={`/${type === 'research' ? 'research' : 'updates'}/${post.slug}`}>{post.title}</Link></h3><p>{post.excerpt}</p><div className="content-card-footer"><small>{post.author} · {new Date(post.updatedAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</small><Link className="text-button" href={`/${type === 'research' ? 'research' : 'updates'}/${post.slug}`}>Read post →</Link></div></article>)}</div> : <div className="notice">{empty}</div>}</section>;
+}

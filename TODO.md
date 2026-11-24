@@ -5,9 +5,10 @@
 - [ ] Member registration form collecting applicant details, academic information, contact details, linguistic interests, biography, and profile photo.
 - [ ] Photo-rich scholar profile pages presenting approved member information accessibly.
 - [ ] Events showcase with upcoming/past events, dates, descriptions, locations, and optional images.
-- [ ] Research and publications showcase for themes, projects, papers, and scholar contributions.
+- [x] Research and publications showcase for themes, projects, papers, and scholar contributions, with MongoDB-backed public research notes and community updates.
 - [ ] Protected admin workspace for authorized administrators to review, approve, edit, archive, and delete member applications and profiles.
-- [ ] Admin controls for managing event/research content and selecting which profiles appear publicly.
+- [x] Admin controls for managing public research and update content, including drafts, publish/unpublish, featured controls, edit, and delete.
+- [x] Share controls for the public website, research hub, and individual posts using native mobile sharing or link copy fallback.
 - [ ] Secure MongoDB-ready server data layer using protected MONGODB_URI, with validation and error handling.
 - [ ] Responsive, accessible, Vercel-ready production configuration with consistent LULS logo usage.
 - [ ] Registration requires a university registration number such as ED/ART/1158/25, full name, and phone number.
