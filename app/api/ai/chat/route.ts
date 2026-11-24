@@ -13,24 +13,46 @@ function fallback(question: string) {
   return 'I can help with joining LULS, language activities, the KES 100 registration payment, account lookup, the WhatsApp group, or the Thomson Falls retreat. What would you like to know?';
 }
 
+type ChatMessage = { role: 'user' | 'assistant'; content: string };
+
+async function askGemini(messages: ChatMessage[], question: string) {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return null;
+  const model = process.env.GEMINI_MODEL || 'gemini-flash-latest';
+  const contents = messages.map((message) => ({ role: message.role === 'assistant' ? 'model' : 'user', parts: [{ text: message.content.slice(0, 500) }] }));
+  const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(apiKey)}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ systemInstruction: { parts: [{ text: siteContext }] }, contents, generationConfig: { temperature: 0.3, maxOutputTokens: 220 } }), signal: AbortSignal.timeout(12000) });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) return null;
+  const parts = data?.candidates?.[0]?.content?.parts;
+  const answer = Array.isArray(parts) ? parts.map((part: { text?: string }) => part.text || '').join('').trim() : '';
+  return answer || fallback(question);
+}
+
+async function askOpenAi(messages: ChatMessage[], question: string) {
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) return null;
+  const baseUrl = (process.env.OPENAI_API_BASE || 'https://api.openai.com/v1').replace(/\/$/, '');
+  const model = process.env.OPENAI_MODEL || 'gpt-4o-mini';
+  const response = await fetch(`${baseUrl}/chat/completions`, { method: 'POST', headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ model, temperature: 0.3, max_tokens: 220, messages: [{ role: 'system', content: siteContext }, ...messages.map((message) => ({ role: message.role, content: message.content.slice(0, 500) }))] }), signal: AbortSignal.timeout(12000) });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) return null;
+  const answer = data?.choices?.[0]?.message?.content;
+  return typeof answer === 'string' && answer.trim() ? answer.trim() : fallback(question);
+}
+
 export async function POST(request: Request) {
   try {
     const body = await request.json().catch(() => ({}));
-    const messages = Array.isArray(body.messages) ? body.messages.filter((message: unknown) => message && typeof message === 'object' && ['user', 'assistant'].includes(String((message as { role?: string }).role)) && typeof (message as { content?: unknown }).content === 'string').slice(-12) : [];
+    const messages = Array.isArray(body.messages) ? body.messages.filter((message: unknown) => message && typeof message === 'object' && ['user', 'assistant'].includes(String((message as { role?: string }).role)) && typeof (message as { content?: unknown }).content === 'string').slice(-12) as ChatMessage[] : [];
     const question = String(messages.at(-1)?.content || '').trim().slice(0, 500);
     if (!question) return NextResponse.json({ error: 'Ask LULS AI a question first.' }, { status: 400 });
 
-    const apiKey = process.env.OPENAI_API_KEY;
-    if (!apiKey) return NextResponse.json({ message: fallback(question), provider: 'luls-fallback' });
-
-    const baseUrl = (process.env.OPENAI_API_BASE || 'https://api.openai.com/v1').replace(/\/$/, '');
-    const model = process.env.OPENAI_MODEL || 'gpt-4o-mini';
-    const response = await fetch(`${baseUrl}/chat/completions`, { method: 'POST', headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ model, temperature: 0.3, max_tokens: 220, messages: [{ role: 'system', content: siteContext }, ...messages.map((message: { role: 'user' | 'assistant'; content: string }) => ({ role: message.role, content: message.content.slice(0, 500) }))] }), signal: AbortSignal.timeout(12000) });
-    const data = await response.json().catch(() => ({}));
-    if (!response.ok) return NextResponse.json({ message: fallback(question), provider: 'luls-fallback' });
-    const message = data?.choices?.[0]?.message?.content;
-    return NextResponse.json({ message: typeof message === 'string' && message.trim() ? message.trim() : fallback(question), provider: 'ai' });
+    const geminiAnswer = await askGemini(messages, question).catch(() => null);
+    if (geminiAnswer) return NextResponse.json({ message: geminiAnswer, provider: 'gemini' });
+    const openAiAnswer = await askOpenAi(messages, question).catch(() => null);
+    if (openAiAnswer) return NextResponse.json({ message: openAiAnswer, provider: 'openai' });
+    return NextResponse.json({ message: fallback(question), provider: 'luls-fallback' });
   } catch {
-    return NextResponse.json({ message: fallback('') , provider: 'luls-fallback' });
+    return NextResponse.json({ message: fallback(''), provider: 'luls-fallback' });
   }
 }
