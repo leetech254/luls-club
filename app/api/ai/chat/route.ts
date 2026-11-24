@@ -25,18 +25,6 @@ async function askOpenRouter(messages: ChatMessage[], question: string) {
   return typeof answer === 'string' && answer.trim() ? answer.trim() : fallback(question);
 }
 
-async function askOpenAi(messages: ChatMessage[], question: string) {
-  const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey) return null;
-  const baseUrl = (process.env.OPENAI_API_BASE || 'https://api.openai.com/v1').replace(/\/$/, '');
-  const model = process.env.OPENAI_MODEL || 'gpt-4o-mini';
-  const response = await fetch(`${baseUrl}/chat/completions`, { method: 'POST', headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ model, temperature: 0.3, max_tokens: 220, messages: [{ role: 'system', content: siteContext }, ...messages.map((message) => ({ role: message.role, content: message.content.slice(0, 500) }))] }), signal: AbortSignal.timeout(12000) });
-  const data = await response.json().catch(() => ({}));
-  if (!response.ok) return null;
-  const answer = data?.choices?.[0]?.message?.content;
-  return typeof answer === 'string' && answer.trim() ? answer.trim() : fallback(question);
-}
-
 export async function POST(request: Request) {
   try {
     const body = await request.json().catch(() => ({}));
@@ -46,8 +34,6 @@ export async function POST(request: Request) {
 
     const openRouterAnswer = await askOpenRouter(messages, question).catch(() => null);
     if (openRouterAnswer) return NextResponse.json({ message: openRouterAnswer, provider: 'openrouter-free' });
-    const openAiAnswer = await askOpenAi(messages, question).catch(() => null);
-    if (openAiAnswer) return NextResponse.json({ message: openAiAnswer, provider: 'openai' });
     return NextResponse.json({ message: fallback(question), provider: 'luls-fallback' });
   } catch {
     return NextResponse.json({ message: fallback(''), provider: 'luls-fallback' });
