@@ -15,17 +15,14 @@ function fallback(question: string) {
 
 type ChatMessage = { role: 'user' | 'assistant'; content: string };
 
-async function askGemini(messages: ChatMessage[], question: string) {
-  const apiKey = process.env.GEMINI_API_KEY;
+async function askOpenRouter(messages: ChatMessage[], question: string) {
+  const apiKey = process.env.OPENROUTER_API_KEY;
   if (!apiKey) return null;
-  const model = process.env.GEMINI_MODEL || 'gemini-flash-latest';
-  const contents = messages.map((message) => ({ role: message.role === 'assistant' ? 'model' : 'user', parts: [{ text: message.content.slice(0, 500) }] }));
-  const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(apiKey)}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ systemInstruction: { parts: [{ text: siteContext }] }, contents, generationConfig: { temperature: 0.3, maxOutputTokens: 220 } }), signal: AbortSignal.timeout(12000) });
+  const response = await fetch('https://openrouter.ai/api/v1/chat/completions', { method: 'POST', headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json', 'HTTP-Referer': process.env.NEXT_PUBLIC_SITE_URL || 'https://luls-club.leetec.online', 'X-Title': 'LULS AI' }, body: JSON.stringify({ model: process.env.OPENROUTER_MODEL || 'openrouter/free', temperature: 0.3, max_tokens: 220, messages: [{ role: 'system', content: siteContext }, ...messages.map((message) => ({ role: message.role, content: message.content.slice(0, 500) }))] }), signal: AbortSignal.timeout(12000) });
   const data = await response.json().catch(() => ({}));
   if (!response.ok) return null;
-  const parts = data?.candidates?.[0]?.content?.parts;
-  const answer = Array.isArray(parts) ? parts.map((part: { text?: string }) => part.text || '').join('').trim() : '';
-  return answer || fallback(question);
+  const answer = data?.choices?.[0]?.message?.content;
+  return typeof answer === 'string' && answer.trim() ? answer.trim() : fallback(question);
 }
 
 async function askOpenAi(messages: ChatMessage[], question: string) {
@@ -47,8 +44,8 @@ export async function POST(request: Request) {
     const question = String(messages.at(-1)?.content || '').trim().slice(0, 500);
     if (!question) return NextResponse.json({ error: 'Ask LULS AI a question first.' }, { status: 400 });
 
-    const geminiAnswer = await askGemini(messages, question).catch(() => null);
-    if (geminiAnswer) return NextResponse.json({ message: geminiAnswer, provider: 'gemini' });
+    const openRouterAnswer = await askOpenRouter(messages, question).catch(() => null);
+    if (openRouterAnswer) return NextResponse.json({ message: openRouterAnswer, provider: 'openrouter-free' });
     const openAiAnswer = await askOpenAi(messages, question).catch(() => null);
     if (openAiAnswer) return NextResponse.json({ message: openAiAnswer, provider: 'openai' });
     return NextResponse.json({ message: fallback(question), provider: 'luls-fallback' });
