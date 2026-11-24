@@ -4,7 +4,7 @@ import { FormEvent, useState } from 'react';
 
 type Message = { role: 'user' | 'assistant'; content: string };
 
-const quickPrompts = ['What is LULS?', 'How do I register?', 'Which languages can I explore?'];
+const quickPrompts = ['What is LULS?', 'How do I register?', 'Which languages can I explore?', 'Join WhatsApp group ↗'];
 const welcome = 'Hello. I’m LULS AI. Ask me about joining the community, languages, registration, payment, account lookup, WhatsApp, or the Thomson Falls retreat.';
 
 export function LulsAiChat() {
