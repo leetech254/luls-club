@@ -15,6 +15,7 @@ function MessageText({ content }: { content: string }) {
 
 export function LulsAiChat() {
   const [open, setOpen] = useState(false);
+  const [expanded, setExpanded] = useState(false);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [messages, setMessages] = useState<Message[]>([{ role: 'assistant', content: welcome }]);
@@ -48,8 +49,8 @@ export function LulsAiChat() {
     <button className="luls-ai-launcher" type="button" onClick={() => setOpen((value) => !value)} aria-label={open ? 'Close LULS AI chat' : 'Open LULS AI chat'} aria-expanded={open}>
       <span className="luls-ai-launcher-icon">{open ? '×' : '✦'}</span><span className="luls-ai-launcher-label">LULS AI</span>
     </button>
-    {open && <section className="luls-ai-room" aria-label="LULS AI chatroom">
-      <header className="luls-ai-header"><div><span className="luls-ai-kicker">LULS COMMUNITY ASSISTANT</span><strong>LULS AI</strong><small>Research · Share · Learn</small></div><div className="luls-ai-header-actions"><button type="button" onClick={resetChat}>New chat</button><button type="button" onClick={() => setOpen(false)} aria-label="Close chat">×</button></div></header>
+    {open && <section className={expanded ? 'luls-ai-room luls-ai-room-expanded' : 'luls-ai-room'} aria-label="LULS AI chatroom">
+      <header className="luls-ai-header"><div><span className="luls-ai-kicker">LULS COMMUNITY ASSISTANT</span><strong>LULS AI</strong><small>Research · Share · Learn</small></div><div className="luls-ai-header-actions"><button type="button" onClick={() => setExpanded((value) => !value)} aria-label={expanded ? 'Use compact chat view' : 'Expand chat view'}>{expanded ? 'Compact' : 'Expand'}</button><button type="button" onClick={resetChat}>New chat</button><button type="button" onClick={() => setOpen(false)} aria-label="Close chat">×</button></div></header>
       <div className="luls-ai-messages" aria-live="polite">
         {messages.map((message, index) => <div className={`luls-ai-message ${message.role}`} key={`${message.role}-${index}`}><span><MessageText content={message.content} /></span></div>)}
         {loading && <div className="luls-ai-message assistant"><span className="luls-ai-typing">Thinking…</span></div>}
