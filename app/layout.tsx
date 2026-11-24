@@ -3,8 +3,8 @@ import './globals.css';
 import { Shell } from '@/components/Shell';
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'https://luls-club.leetec.online');
-const title = 'Laikipia University Language Scholars Community | LULS';
-const description = 'LULS welcomes students from every Laikipia University course who want to research, share, and learn languages including German, Spanish, sign language, French, English, Kiswahili, and more.';
+const title = 'LULS — Language Scholars Community';
+const description = 'Research, share, and learn languages with students across Laikipia University. Explore LULS projects, updates, events, and community membership.';
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
@@ -23,9 +23,9 @@ export const metadata: Metadata = {
     title,
     description,
     locale: 'en_KE',
-    images: [{ url: '/opengraph-image', width: 1200, height: 630, alt: 'Laikipia University Language Scholars Community' }],
+    images: [{ url: '/opengraph-image', width: 1200, height: 630, type: 'image/png', alt: 'LULS — Laikipia University Language Scholars Community' }],
   },
-  twitter: { card: 'summary_large_image', title, description, images: ['/opengraph-image'] },
+  twitter: { card: 'summary_large_image', title, description, images: [{ url: '/opengraph-image', alt: 'LULS — Laikipia University Language Scholars Community' }] },
   robots: { index: true, follow: true, googleBot: { index: true, follow: true, 'max-image-preview': 'large', 'max-snippet': -1, 'max-video-preview': -1 } },
 };
 

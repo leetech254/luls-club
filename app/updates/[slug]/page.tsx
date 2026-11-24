@@ -4,7 +4,7 @@ import { findPost } from '@/lib/content';
 import { ShareButton } from '@/components/ShareButton';
 import { SocialShareButtons } from '@/components/SocialShareButtons';
 
-export async function generateMetadata({ params }: { params: { slug: string } }) { const post = await findPost('update', params.slug); return post ? { title: post.title, description: post.excerpt } : { title: 'Community update not found' }; }
+export async function generateMetadata({ params }: { params: { slug: string } }) { const post = await findPost('update', params.slug); if (!post) return { title: 'Community update not found' }; const url = `/updates/${post.slug}`; return { title: post.title, description: post.excerpt, alternates: { canonical: url }, openGraph: { type: 'article', url, title: post.title, description: post.excerpt, images: [{ url: '/opengraph-image', width: 1200, height: 630, type: 'image/png', alt: post.title }] }, twitter: { card: 'summary_large_image', title: post.title, description: post.excerpt, images: ['/opengraph-image'] } }; }
 
 export default async function CommunityUpdate({ params }: { params: { slug: string } }) {
   const post = await findPost('update', params.slug);
