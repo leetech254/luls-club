@@ -4,7 +4,8 @@ import { FormEvent, useState } from 'react';
 
 type Message = { role: 'user' | 'assistant'; content: string };
 
-const quickPrompts = ['What is LULS?', 'How do I register?', 'Which languages can I explore?', 'Join WhatsApp group ↗'];
+const quickPrompts = ['What is LULS?', 'How do I register?', 'Which languages can I explore?'];
+const whatsappGroupUrl = 'https://chat.whatsapp.com/GQmAeNvM95P2ht4HOsjzke?s=cl&p=a&iam=2';
 const welcome = 'Hello. I’m LULS AI. Ask me about joining the community, languages, registration, payment, account lookup, WhatsApp, or the Thomson Falls retreat.';
 
 export function LulsAiChat() {
@@ -43,7 +44,7 @@ export function LulsAiChat() {
         {messages.map((message, index) => <div className={`luls-ai-message ${message.role}`} key={`${message.role}-${index}`}><span>{message.content}</span></div>)}
         {loading && <div className="luls-ai-message assistant"><span className="luls-ai-typing">Thinking…</span></div>}
       </div>
-      {messages.length === 1 && <div className="luls-ai-quick">{quickPrompts.map((prompt) => <button type="button" key={prompt} onClick={() => void sendMessage(undefined, prompt)}>{prompt}</button>)}</div>}
+      {messages.length === 1 && <div className="luls-ai-quick">{quickPrompts.map((prompt) => <button type="button" key={prompt} onClick={() => void sendMessage(undefined, prompt)}>{prompt}</button>)}<a href={whatsappGroupUrl} target="_blank" rel="noreferrer">Join WhatsApp group ↗</a></div>}
       <form className="luls-ai-form" onSubmit={sendMessage}><input value={input} onChange={(event) => setInput(event.target.value)} placeholder="Ask LULS AI…" maxLength={500} aria-label="Ask LULS AI" /><button type="submit" disabled={loading || !input.trim()} aria-label="Send message">↗</button></form>
       <small className="luls-ai-disclaimer">LULS AI shares general community information. Confirm payment and event details on the official portal.</small>
     </section>}
