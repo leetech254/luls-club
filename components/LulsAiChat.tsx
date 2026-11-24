@@ -10,7 +10,7 @@ const welcome = 'Hello. I’m LULS AI. Ask me about joining the community, langu
 
 function MessageText({ content }: { content: string }) {
   const parts = content.split(/(https?:\/\/\S+)/g);
-  return <>{parts.map((part, index) => part.startsWith('http') ? <a href={part.replace(/[.,]$/, '')} target="_blank" rel="noreferrer" key={`${part}-${index}`}>{part}</a> : <span key={`${part}-${index}`}>{part}</span>)}</>;
+  return <>{parts.map((part, index) => part.startsWith('http') ? <a href={part.replace(/[.,]$/, '')} target="_blank" rel="noreferrer" key={`${part}-${index}`}>{part}</a> : part)}</>;
 }
 
 export function LulsAiChat() {
@@ -52,8 +52,8 @@ export function LulsAiChat() {
     {open && <section className={expanded ? 'luls-ai-room luls-ai-room-expanded' : 'luls-ai-room'} aria-label="LULS AI chatroom">
       <header className="luls-ai-header"><div><span className="luls-ai-kicker">LULS COMMUNITY ASSISTANT</span><strong>LULS AI</strong><small>Research · Share · Learn</small></div><div className="luls-ai-header-actions"><button type="button" onClick={() => setExpanded((value) => !value)} aria-label={expanded ? 'Use compact chat view' : 'Expand chat view'}>{expanded ? 'Compact' : 'Expand'}</button><button type="button" onClick={resetChat}>New chat</button><button type="button" onClick={() => setOpen(false)} aria-label="Close chat">×</button></div></header>
       <div className="luls-ai-messages" aria-live="polite">
-        {messages.map((message, index) => <div className={`luls-ai-message ${message.role}`} key={`${message.role}-${index}`}><span><MessageText content={message.content} /></span></div>)}
-        {loading && <div className="luls-ai-message assistant"><span className="luls-ai-typing">Thinking…</span></div>}
+        {messages.map((message, index) => <div className={`luls-ai-message ${message.role}`} key={`${message.role}-${index}`}><div><MessageText content={message.content} /></div></div>)}
+        {loading && <div className="luls-ai-message assistant"><div className="luls-ai-typing">Thinking…</div></div>}
         <div ref={messagesEnd} />
       </div>
       <div className="luls-ai-quick"><span className="luls-ai-suggestions-label">Suggestions</span>{quickPrompts.map((prompt) => <button type="button" key={prompt} onClick={() => void sendMessage(undefined, prompt)} disabled={loading}>{prompt}</button>)}<a href={whatsappGroupUrl} target="_blank" rel="noreferrer">Join WhatsApp group ↗</a></div>
