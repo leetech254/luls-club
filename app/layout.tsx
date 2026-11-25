@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import './globals.css';
 import { Shell } from '@/components/Shell';
 
-const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'https://luls-club.leetec.online');
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://luls-club.leetec.online';
 const title = 'LULS — Language Scholars Community';
 const description = 'Research, share, and learn languages with students across Laikipia University. Explore LULS projects, updates, events, and community membership.';
 

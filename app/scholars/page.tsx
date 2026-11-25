@@ -1,6 +1,9 @@
 import Link from 'next/link';
+import type { Metadata } from 'next';
 import { listMembers } from '@/lib/data';
 import { logoPath } from '@/lib/preview';
+
+export const metadata: Metadata = { title: 'Registered scholars directory', description: 'Explore the public registration directory for the Laikipia University Language Scholars Community. Personal member details remain private.', alternates: { canonical: '/scholars' }, openGraph: { type: 'website', url: '/scholars', title: 'LULS registered scholars directory', description: 'Explore the public LULS registration directory for Laikipia University students.' }, twitter: { card: 'summary_large_image', title: 'LULS registered scholars directory', description: 'Explore the public LULS registration directory for Laikipia University students.' } };
 
 export default async function Scholars({ searchParams }: { searchParams?: { q?: string } }) {
   const query = (searchParams?.q || '').trim();

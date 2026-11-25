@@ -1,9 +1,10 @@
 import Link from 'next/link';
+import type { Metadata } from 'next';
 import { listPosts } from '@/lib/content';
 import { ShareButton } from '@/components/ShareButton';
 import { SocialShareButtons } from '@/components/SocialShareButtons';
 
-export const metadata = { title: 'Research and updates', description: 'Public LULS research notes, language projects, announcements, and community updates.' };
+export const metadata: Metadata = { title: 'Research and updates', description: 'Public LULS research notes, language projects, announcements, and community updates.', alternates: { canonical: '/research' }, openGraph: { type: 'website', url: '/research', title: 'LULS research and updates', description: 'Public LULS research notes, language projects, announcements, and community updates.' }, twitter: { card: 'summary_large_image', title: 'LULS research and updates', description: 'Public LULS research notes, language projects, announcements, and community updates.' } };
 
 export default async function ResearchHub() {
   const [research, updates] = await Promise.all([listPosts({ type: 'research', publishedOnly: true }), listPosts({ type: 'update', publishedOnly: true })]);
