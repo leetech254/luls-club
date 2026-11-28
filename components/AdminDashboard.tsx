@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo, useState } from 'react';
+import React from 'react';
 import type { Member } from '@/lib/preview';
 import type { PublicPost } from '@/lib/content';
 import { AdminMemberManager } from '@/components/AdminMemberManager';
@@ -21,8 +22,8 @@ const menuItems: MenuItem[] = [
 ];
 const contentItems = menuItems.filter((item): item is MenuItem & { key: Tab } => item.key !== 'logout');
 
-export function AdminDashboard({ members, posts, email }: { members: Member[]; posts: PublicPost[]; email: string }) {
-  const [activeTab, setActiveTab] = useState<Tab>('overview');
+export function AdminDashboard({ members, posts, email, initialTab = 'overview' }: { members: Member[]; posts: PublicPost[]; email: string; initialTab?: Tab }) {
+  const [activeTab, setActiveTab] = useState<Tab>(initialTab);
   const [menuOpen, setMenuOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [memberStatusFilter, setMemberStatusFilter] = useState('all');

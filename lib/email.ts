@@ -1,4 +1,5 @@
 import type { Member } from '@/lib/preview';
+import type { PublicPost } from '@/lib/content';
 
 function escapeHtml(value: unknown) {
   return String(value ?? '').replace(/[&<>"']/g, (character) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character] || character);
@@ -78,6 +79,32 @@ export async function sendRetreatAnnouncementEmail(member: Member) {
   const text = `Dear ${member.name},\n\nThis is an important update for all approved LULS members about the Thomson Falls retreat.\n\nEvent: LULS Thomson Falls member retreat\nDate: Sunday, 29 November 2026\nMeeting / pickup point: Cherika\nStart time: 11:00 PM\nContribution: KES 200 for transport and entry\nPayment deadline: 2:00 PM today, Saturday 28 November 2026 (East Africa Time)\n\nNew retreat payments close automatically at the deadline. If you have already started a payment prompt, complete it on your M-Pesa phone and keep your receipt.\n\nFor support, call +254 723 617 436 or WhatsApp us at ${whatsapp}.\nRetreat details: ${siteUrl}/retreat\n\nWe look forward to travelling with you,\nLaikipia University Language Scholars Community`;
   const html = `<div style="background:#f6f1e7;padding:32px 16px;font-family:Arial,sans-serif;color:#12244f"><div style="max-width:620px;margin:0 auto;background:#fffdf8;border:1px solid #e5ddce"><div style="background:#12244f;padding:28px 32px;color:#fffdf8"><div style="font-size:12px;letter-spacing:3px;color:#e8c36c;font-weight:700">LAIKIPIA UNIVERSITY</div><div style="font-size:18px;letter-spacing:2px;margin-top:8px">LANGUAGE SCHOLARS COMMUNITY</div></div><div style="padding:32px"><div style="color:#a07626;font-size:11px;letter-spacing:2px;font-weight:700">IMPORTANT RETREAT UPDATE</div><h1 style="font-family:Georgia,serif;font-size:32px;margin:14px 0;color:#12244f">Thomson Falls retreat details</h1><p style="font-size:16px;line-height:1.7;color:#546076">Dear ${safeName}, here are the confirmed arrangements for the LULS member retreat.</p><div style="background:#f1eadc;padding:20px;margin:24px 0;line-height:1.9"><strong>Date:</strong> Sunday, 29 November 2026<br/><strong>Meeting / pickup point:</strong> Cherika<br/><strong>Start time:</strong> 11:00 PM<br/><strong>Contribution:</strong> KES 200 · Transport and entry<br/><strong>Payment deadline:</strong> 2:00 PM today, Saturday 28 November 2026 (East Africa Time)</div><p style="font-size:14px;line-height:1.7;color:#546076"><strong>Important:</strong> New retreat payments close automatically at the deadline. If you have already started a payment prompt, complete it on your M-Pesa phone and keep your receipt.</p><p style="font-size:14px;line-height:1.7;color:#546076">Need help? Call <strong>+254 723 617 436</strong> or <a href="${whatsapp}" style="color:#1d6b42;font-weight:700">WhatsApp LULS support</a>.</p><a href="${escapeHtml(`${siteUrl}/retreat`)}" style="display:inline-block;background:#c9962e;color:#12244f;padding:14px 18px;text-decoration:none;font-weight:700">View retreat details</a><p style="font-size:14px;line-height:1.7;color:#546076;margin-top:28px">We look forward to travelling with you,<br/><strong>Laikipia University Language Scholars Community</strong></p></div></div></div>`;
   const headers: Record<string, string> = { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json', 'Idempotency-Key': `luls-retreat-announcement/2026-11-28/${member.regNo}`.slice(0, 256) };
+  const payload: Record<string, unknown> = { from, to: [member.email], subject, html, text };
+  if (replyTo) payload.reply_to = replyTo;
+  try {
+    const response = await fetch('https://api.resend.com/emails', { method: 'POST', headers, body: JSON.stringify(payload) });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) return { sent: false as const, configured: true as const, error: data?.message || data?.name || `Email provider returned HTTP ${response.status}.` };
+    return { sent: true as const, configured: true as const, id: data?.id ? String(data.id) : undefined };
+  } catch { return { sent: false as const, configured: true as const, error: 'Unable to connect to the email provider.' }; }
+}
+
+export async function sendContentAnnouncementEmail(member: Member, post: PublicPost) {
+  const { apiKey, from, replyTo } = config();
+  if (!apiKey || !from) return { sent: false as const, configured: false as const, error: 'Email is not configured. Add RESEND_API_KEY and EMAIL_FROM in Vercel.' };
+  if (!member.email) return { sent: false as const, configured: true as const, error: 'Member email address is missing.' };
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://luls-club.leetec.online';
+  const kind = post.type === 'retreat' ? 'Retreat' : 'Event';
+  const safeName = escapeHtml(member.name);
+  const safeTitle = escapeHtml(post.title);
+  const safeExcerpt = escapeHtml(post.excerpt);
+  const safeDate = escapeHtml(post.eventDate || 'See event details');
+  const safeLocation = escapeHtml(post.eventLocation || 'See event details');
+  const path = `/${post.type === 'retreat' ? 'retreats' : 'events'}/${post.slug}`;
+  const subject = `LULS ${kind}: ${post.title}`;
+  const text = `Dear ${member.name},\n\n${post.title}\n\n${post.excerpt}\n\nDate: ${post.eventDate || 'See event details'}\nLocation: ${post.eventLocation || 'See event details'}\n\nRead the full details: ${siteUrl}${path}\n\nLaikipia University Language Scholars Community`;
+  const html = `<div style="background:#f6f1e7;padding:32px 16px;font-family:Arial,sans-serif;color:#12244f"><div style="max-width:620px;margin:0 auto;background:#fffdf8;border:1px solid #e5ddce"><div style="background:#12244f;padding:28px 32px;color:#fffdf8"><div style="font-size:12px;letter-spacing:3px;color:#e8c36c;font-weight:700">LULS ${kind.toUpperCase()}</div><div style="font-size:18px;letter-spacing:2px;margin-top:8px">LANGUAGE SCHOLARS COMMUNITY</div></div><div style="padding:32px"><div style="color:#a07626;font-size:11px;letter-spacing:2px;font-weight:700">${kind.toUpperCase()} ANNOUNCEMENT</div><h1 style="font-family:Georgia,serif;font-size:32px;margin:14px 0;color:#12244f">${safeTitle}</h1><p style="font-size:16px;line-height:1.7;color:#546076">Dear ${safeName}, ${safeExcerpt}</p><div style="background:#f1eadc;padding:20px;margin:24px 0;line-height:1.9"><strong>Date:</strong> ${safeDate}<br/><strong>Location:</strong> ${safeLocation}</div><a href="${escapeHtml(`${siteUrl}${path}`)}" style="display:inline-block;background:#c9962e;color:#12244f;padding:14px 18px;text-decoration:none;font-weight:700">View full details</a><p style="font-size:14px;line-height:1.7;color:#546076;margin-top:28px">Laikipia University Language Scholars Community</p></div></div></div>`;
+  const headers: Record<string, string> = { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json', 'Idempotency-Key': `luls-content/${post.slug}/${member.regNo}`.slice(0, 256) };
   const payload: Record<string, unknown> = { from, to: [member.email], subject, html, text };
   if (replyTo) payload.reply_to = replyTo;
   try {

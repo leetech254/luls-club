@@ -1,7 +1,7 @@
 import { ObjectId } from 'mongodb';
 import { getDb } from '@/lib/data';
 
-export type ContentType = 'research' | 'update';
+export type ContentType = 'research' | 'update' | 'event' | 'retreat';
 export type PublicPost = {
   _id?: string;
   type: ContentType;
@@ -13,9 +13,20 @@ export type PublicPost = {
   author: string;
   published: boolean;
   featured: boolean;
+  eventDate?: string;
+  eventLocation?: string;
+  notificationSentAt?: string;
+  notificationSentCount?: number;
+  notificationFailedCount?: number;
+  notificationSentTo?: string[];
   createdAt: string;
   updatedAt: string;
 };
+
+export function contentPath(post: Pick<PublicPost, 'type' | 'slug'>) {
+  const section = post.type === 'research' ? 'research' : post.type === 'update' ? 'updates' : post.type === 'event' ? 'events' : 'retreats';
+  return `/${section}/${post.slug}`;
+}
 
 const starterPosts = [
   { type: 'research' as const, title: 'Language learning across disciplines', slug: 'language-learning-across-disciplines', excerpt: 'A starting note on how students from every course can use language research to connect classrooms, communities, and cultures.', body: 'LULS welcomes questions from every Laikipia University course. Language learning becomes richer when students bring different academic backgrounds, lived experiences, and curiosity into the same conversation.\n\nOur research circle will share practical questions, reading suggestions, field observations, and student-led work across German, Spanish, sign language, French, English, Kiswahili, and more.', tags: ['multilingual learning', 'student research'], author: 'LULS Research Desk', published: true, featured: true },

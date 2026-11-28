@@ -4,7 +4,7 @@ import { getDb } from '@/lib/data';
 import { findPostById, listPosts, type ContentType, type PublicPost } from '@/lib/content';
 import { ObjectId } from 'mongodb';
 
-const types: ContentType[] = ['research', 'update'];
+const types: ContentType[] = ['research', 'update', 'event', 'retreat'];
 const slugify = (value: string) => value.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 100);
 function clean(body: Record<string, unknown>, existing?: PublicPost) {
   const title = String(body.title ?? existing?.title ?? '').trim();
@@ -12,13 +12,17 @@ function clean(body: Record<string, unknown>, existing?: PublicPost) {
   const excerpt = String(body.excerpt ?? existing?.excerpt ?? '').trim();
   const contentBody = String(body.body ?? existing?.body ?? '').trim();
   const author = String(body.author ?? existing?.author ?? 'LULS Research Desk').trim();
+  const eventDate = String(body.eventDate ?? existing?.eventDate ?? '').trim();
+  const eventLocation = String(body.eventLocation ?? existing?.eventLocation ?? '').trim();
   const tags = String(body.tags ?? existing?.tags?.join(',') ?? '').split(',').map((tag) => tag.trim()).filter(Boolean).slice(0, 8);
   const slug = slugify(String(body.slug ?? existing?.slug ?? title));
   if (!title || title.length < 4) throw new Error('Add a clear post title.');
-  if (!types.includes(type)) throw new Error('Choose Research or Community update.');
+  if (!types.includes(type)) throw new Error('Choose Research, Community update, Event, or Retreat.');
   if (!excerpt || !contentBody) throw new Error('Add a short summary and post content.');
+  if ((type === 'event' || type === 'retreat') && !eventDate) throw new Error('Add the event or retreat date.');
+  if ((type === 'event' || type === 'retreat') && !eventLocation) throw new Error('Add the event or retreat location.');
   if (!slug) throw new Error('A usable post link could not be created.');
-  return { title, type, excerpt, body: contentBody, author: author || 'LULS Research Desk', tags, slug, published: body.published === undefined ? (existing?.published ?? false) : Boolean(body.published), featured: body.featured === undefined ? (existing?.featured ?? false) : Boolean(body.featured) };
+  return { title, type, excerpt, body: contentBody, author: author || 'LULS Research Desk', tags, slug, eventDate: eventDate || undefined, eventLocation: eventLocation || undefined, published: body.published === undefined ? (existing?.published ?? false) : Boolean(body.published), featured: body.featured === undefined ? (existing?.featured ?? false) : Boolean(body.featured) };
 }
 
 export async function GET() {
