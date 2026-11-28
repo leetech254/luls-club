@@ -8,6 +8,7 @@ import { SocialShareButtons } from '@/components/SocialShareButtons';
 type RetreatMember = { regNo: string; name: string; retreatPaymentStatus: string; retreatPaymentRequestId?: string; retreatPaymentReceipt?: string | null };
 
 type Notice = { kind: 'success' | 'error' | 'info'; text: string };
+const RETREAT_PAYMENT_DEADLINE = '2026-11-28T11:00:00.000Z';
 
 export default function RetreatPage() {
   const [lookup, setLookup] = useState('');
@@ -15,6 +16,14 @@ export default function RetreatPage() {
   const [member, setMember] = useState<RetreatMember | null>(null);
   const [notice, setNotice] = useState<Notice | null>(null);
   const [loading, setLoading] = useState(false);
+  const [paymentOpen, setPaymentOpen] = useState(() => Date.now() < new Date(RETREAT_PAYMENT_DEADLINE).getTime());
+
+  useEffect(() => {
+    const update = () => setPaymentOpen(Date.now() < new Date(RETREAT_PAYMENT_DEADLINE).getTime());
+    const timer = window.setInterval(update, 30000);
+    update();
+    return () => window.clearInterval(timer);
+  }, []);
 
   async function findMember(event?: React.FormEvent) {
     event?.preventDefault();
@@ -24,18 +33,21 @@ export default function RetreatPage() {
       const response = await fetch(`/api/retreat?lookup=${encodeURIComponent(lookup)}`);
       const body = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(body.error || 'No eligible member account was found.');
+      if (body.paymentOpen === false) setPaymentOpen(false);
       setMember(body.member);
-      setNotice({ kind: 'success', text: body.member.retreatPaymentStatus === 'paid' ? 'Your retreat payment is already confirmed.' : 'Member verified. You can now pay the KES 200 retreat fee.' });
+      setNotice({ kind: body.member.retreatPaymentStatus === 'paid' ? 'success' : body.paymentOpen === false ? 'info' : 'success', text: body.member.retreatPaymentStatus === 'paid' ? 'Your retreat payment is already confirmed.' : body.paymentOpen === false ? 'The payment deadline has passed. New retreat payments are closed.' : 'Member verified. You can now pay the KES 200 retreat fee.' });
     } catch (error) { setNotice({ kind: 'error', text: error instanceof Error ? error.message : 'Unable to verify your member account.' }); }
     finally { setLoading(false); }
   }
 
   async function startPayment(event: React.FormEvent) {
     event.preventDefault();
+    if (!paymentOpen) { setNotice({ kind: 'error', text: 'The payment deadline has passed. New KES 200 retreat payments are closed.' }); return; }
     setLoading(true); setNotice(null);
     try {
       const response = await fetch('/api/retreat', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ lookup, mpesaPhone }) });
       const body = await response.json().catch(() => ({}));
+      if (body.paymentOpen === false) setPaymentOpen(false);
       if (!response.ok) throw new Error(body.error || 'Unable to start the retreat payment.');
       setMember((current) => current ? { ...current, retreatPaymentStatus: body.paymentStatus, retreatPaymentRequestId: body.requestId } : current);
       setNotice({ kind: 'success', text: body.message || 'KES 200 payment prompt sent. Complete it on your M-Pesa phone.' });
@@ -56,5 +68,5 @@ export default function RetreatPage() {
     return () => window.clearInterval(timer);
   }, [member?.retreatPaymentRequestId, member?.retreatPaymentStatus, member?.regNo]);
 
-  return <div className="form-page retreat-page"><div className="retreat-hero"><img src="/images/thomson-falls.jpg" alt="Thomson Falls in Nyahururu" /><div className="retreat-hero-copy"><div className="eyebrow">LULS member retreat</div><h1>Thomson Falls.</h1><p>Join the LULS circle for a member day out on Sunday, 29 November 2026.</p><div className="retreat-meta"><strong>KES 200</strong><span>Transport + entry fee</span></div></div></div><div className="actions retreat-actions"><ShareButton title="LULS Thomson Falls member retreat" text="Join the LULS member retreat at Thomson Falls on Sunday, 29 November 2026." /><SocialShareButtons title="LULS Thomson Falls member retreat" text="Join the LULS member retreat at Thomson Falls on Sunday, 29 November 2026." /><Link className="button alt" href="/">← Back to home</Link></div><div className="retreat-grid"><section className="form-card"><div className="eyebrow">Member-only booking</div><h2>Reserve your place.</h2><p className="helper">Search your registered LULS account first. Only approved members who have completed the KES 100 registration payment can pay the KES 200 retreat contribution.</p><form onSubmit={findMember}><div className="field"><label>Name, registration number, or phone number</label><input value={lookup} onChange={(event) => setLookup(event.target.value)} required placeholder="James, ED/ART/1158/25, or 0712 345 678" /></div><button className="button" type="submit" disabled={loading}>{loading ? 'Checking…' : 'Check member eligibility ↗'}</button></form>{notice && <div className={`notice retreat-notice retreat-${notice.kind}`}>{notice.text}</div>}{member && <div className="retreat-payment-box"><div className="tag">Verified member</div><h3>Registration verified</h3><p>Registration number: <strong>{member.regNo}</strong></p>{member.retreatPaymentStatus === 'paid' ? <div className="notice retreat-success">KES 200 paid · You are booked for the retreat.{member.retreatPaymentReceipt && <><br />Receipt: {member.retreatPaymentReceipt}</>}</div> : <form onSubmit={startPayment}><div className="field"><label>M-Pesa number for KES 200</label><input value={mpesaPhone} onChange={(event) => setMpesaPhone(event.target.value)} required type="tel" placeholder="0712 345 678" /><span className="helper">This can be different from your LULS contact number.</span></div><button className="button gold" type="submit" disabled={loading}>{loading ? 'Sending prompt…' : 'Pay KES 200 retreat fee ↗'}</button></form>}</div>}</section><aside className="retreat-info card"><div className="eyebrow">Trip details</div><h2>Come with the circle.</h2><p>Bring your LULS community spirit and keep your M-Pesa phone available for the payment prompt.</p><div className="retreat-detail-list"><span>Date</span><strong>Sunday, 29 November 2026</strong><span>Destination</span><strong>Thomson Falls, Nyahururu</strong><span>Contribution</span><strong>KES 200 · Transport and entry</strong><span>Eligibility</span><strong>Approved, paid LULS members</strong></div><div className="notice" style={{ marginTop: 22 }}>Not registered yet? <Link href="/register"><strong>Pay the KES 100 registration fee first →</strong></Link></div></aside></div></div>;
+  return <div className="form-page retreat-page"><div className="retreat-hero"><img src="/images/thomson-falls.jpg" alt="Thomson Falls in Nyahururu" /><div className="retreat-hero-copy"><div className="eyebrow">LULS member retreat</div><h1>Thomson Falls.</h1><p>Join the LULS circle for a member day out on Sunday, 29 November 2026.</p><div className="retreat-meta"><strong>KES 200</strong><span>Transport + entry fee</span></div></div></div><div className="actions retreat-actions"><ShareButton title="LULS Thomson Falls member retreat" text="Join the LULS member retreat at Thomson Falls on Sunday, 29 November 2026." /><SocialShareButtons title="LULS Thomson Falls member retreat" text="Join the LULS member retreat at Thomson Falls on Sunday, 29 November 2026." /><Link className="button alt" href="/">← Back to home</Link></div><div className="retreat-grid"><section className="form-card"><div className="eyebrow">Member-only booking</div><h2>Reserve your place.</h2><p className="helper">Search your registered LULS account first. Only approved members who have completed the KES 100 registration payment can pay the KES 200 retreat contribution.</p><div className={paymentOpen ? 'notice retreat-notice retreat-info' : 'notice retreat-notice retreat-error'}>{paymentOpen ? 'Payment deadline: 2:00 PM today, Saturday 28 November 2026 (East Africa Time).' : 'The 2:00 PM payment deadline has passed. New retreat payments are now closed.'}</div><form onSubmit={findMember}><div className="field"><label>Name, registration number, or phone number</label><input value={lookup} onChange={(event) => setLookup(event.target.value)} required placeholder="James, ED/ART/1158/25, or 0712 345 678" /></div><button className="button" type="submit" disabled={loading}>{loading ? 'Checking…' : 'Check member eligibility ↗'}</button></form>{notice && <div className={`notice retreat-notice retreat-${notice.kind}`}>{notice.text}</div>}{member && <div className="retreat-payment-box"><div className="tag">Verified member</div><h3>Registration verified</h3><p>Registration number: <strong>{member.regNo}</strong></p>{member.retreatPaymentStatus === 'paid' ? <div className="notice retreat-success">KES 200 paid · You are booked for the retreat.{member.retreatPaymentReceipt && <><br />Receipt: {member.retreatPaymentReceipt}</>}</div> : member.retreatPaymentStatus === 'pending' && member.retreatPaymentRequestId ? <div className="notice retreat-info">Your payment prompt is already in progress. Complete it on your M-Pesa phone; we will continue checking the status.</div> : !paymentOpen ? <div className="notice retreat-error">The deadline has passed, so no new KES 200 payment can be started.</div> : <form onSubmit={startPayment}><div className="field"><label>M-Pesa number for KES 200</label><input value={mpesaPhone} onChange={(event) => setMpesaPhone(event.target.value)} required type="tel" placeholder="0712 345 678" /><span className="helper">This can be different from your LULS contact number.</span></div><button className="button gold" type="submit" disabled={loading}>{loading ? 'Sending prompt…' : 'Pay KES 200 retreat fee ↗'}</button></form>}</div>}</section><aside className="retreat-info card"><div className="eyebrow">Trip details</div><h2>Come with the circle.</h2><p>Bring your LULS community spirit and keep your M-Pesa phone available for the payment prompt.</p><div className="retreat-detail-list"><span>Date</span><strong>Sunday, 29 November 2026</strong><span>Destination</span><strong>Thomson Falls, Nyahururu</strong><span>Contribution</span><strong>KES 200 · Transport and entry</strong><span>Eligibility</span><strong>Approved, paid LULS members</strong></div><div className="notice" style={{ marginTop: 22 }}>Not registered yet? <Link href="/register"><strong>Pay the KES 100 registration fee first →</strong></Link></div></aside></div></div>;
 }

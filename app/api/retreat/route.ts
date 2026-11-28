@@ -6,8 +6,10 @@ import { sendRetreatPaymentConfirmationEmail } from '@/lib/email';
 const phonePattern = /^\+254(?:1[0-9]|7[0-9])[0-9]{7}$/;
 const paidStatuses = ['SUCCESS', 'SUCCESSFUL', 'COMPLETED', 'PAID', 'CONFIRMED'];
 const rejectedStatuses = ['FAILED', 'FAILED_PAYMENT', 'CANCELLED', 'REJECTED'];
+const RETREAT_PAYMENT_DEADLINE = '2026-11-28T11:00:00.000Z'; // 2:00 PM East Africa Time on 28 November 2026
 
 function paymentState(status: string) { return paidStatuses.includes(status) ? 'paid' : rejectedStatuses.includes(status) ? 'rejected' : 'pending'; }
+function paymentOpen() { return Date.now() < new Date(RETREAT_PAYMENT_DEADLINE).getTime(); }
 
 async function upsertRetreatRecord(db: NonNullable<Awaited<ReturnType<typeof getDb>>>, member: any, status: string, receipt?: string | null, paidAt?: string) {
   const requestId = member.retreatPaymentRequestId || member.retreatPaymentReference;
@@ -71,7 +73,7 @@ export async function GET(req: Request) {
       const paidAt = member.retreatPaidAt || new Date().toISOString();
       if (db) { await upsertRetreatRecord(db, member, 'paid', receipt, paidAt); emailStatus = await sendRetreatEmailIfNeeded(db, member, receipt, paidAt); }
     }
-    return NextResponse.json({ eligible: true, emailStatus, member: { regNo: member.regNo, name: member.name, retreatPaymentStatus: status, retreatPaymentRequestId: member.retreatPaymentRequestId, retreatPaymentReceipt: receipt || null } });
+    return NextResponse.json({ eligible: true, emailStatus, paymentOpen: paymentOpen(), paymentDeadline: RETREAT_PAYMENT_DEADLINE, member: { regNo: member.regNo, name: member.name, retreatPaymentStatus: status, retreatPaymentRequestId: member.retreatPaymentRequestId, retreatPaymentReceipt: receipt || null } });
   } catch { return NextResponse.json({ error: 'Unable to check retreat payment status.' }, { status: 500 }); }
 }
 
@@ -85,6 +87,7 @@ export async function POST(req: Request) {
     const { member, error } = await findRetreatMember(lookup);
     if (error || !member) return error;
     if (member.retreatPaymentStatus === 'paid') return NextResponse.json({ eligible: true, paymentStatus: 'paid', message: 'Your Thomson Falls retreat payment is already confirmed.', member: { regNo: member.regNo, name: member.name, retreatPaymentReceipt: member.retreatPaymentReceipt || null } });
+    if (!paymentOpen()) return NextResponse.json({ error: 'The retreat payment deadline has passed. New KES 200 payments are now closed.', paymentOpen: false, paymentDeadline: RETREAT_PAYMENT_DEADLINE }, { status: 410 });
     const prompt = await startMpesaPrompt({ phone, regNo: member.regNo, name: member.name, amount: 200, accountReference: `LULS-RETREAT-${member.regNo}` });
     if (!prompt.accepted) return NextResponse.json({ error: prompt.error || 'Unable to start the KES 200 retreat payment.' }, { status: 503 });
     const db = await getDb();
