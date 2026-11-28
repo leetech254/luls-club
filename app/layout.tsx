@@ -14,6 +14,8 @@ export const metadata: Metadata = {
   keywords: ['Laikipia University Language Scholars Community', 'Laikipia University', 'LULS', 'Kenya linguistics', 'multilingual learning'],
   authors: [{ name: 'Laikipia University Language Scholars Community' }],
   creator: 'Laikipia University Language Scholars Community',
+  category: 'education',
+  verification: { google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION || undefined },
   alternates: { canonical: '/' },
   icons: { icon: '/icon.jpg', apple: '/icon.jpg' },
   openGraph: {
@@ -30,6 +32,7 @@ export const metadata: Metadata = {
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
-  const structuredData = { '@context': 'https://schema.org', '@type': 'EducationalOrganization', name: 'Laikipia University Language Scholars Community', alternateName: 'LULS', description, url: siteUrl, logo: `${siteUrl}/icon.jpg`, areaServed: 'Kenya' };
-  return <html lang="en"><body><Shell>{children}</Shell><script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }} /></body></html>;
+  const organizationData = { '@context': 'https://schema.org', '@type': 'EducationalOrganization', name: 'Laikipia University Language Scholars Community', alternateName: 'LULS', description, url: siteUrl, logo: `${siteUrl}/icon.jpg`, areaServed: 'Kenya', sameAs: ['https://chat.whatsapp.com/GQmAeNvM95P2ht4HOsjzke?s=cl&p=a&iam=2'] };
+  const websiteData = { '@context': 'https://schema.org', '@type': 'WebSite', name: title, url: siteUrl, description, inLanguage: 'en-KE', potentialAction: { '@type': 'SearchAction', target: `${siteUrl}/research?query={search_term_string}`, 'query-input': 'required name=search_term_string' } };
+  return <html lang="en"><body><Shell>{children}</Shell><script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationData) }} /><script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteData) }} /></body></html>;
 }
